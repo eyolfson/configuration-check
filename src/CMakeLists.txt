@@ -24,7 +24,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 add_definitions(${LIBALPM_DEFINITIONS})
 include_directories(${LIBALPM_INCLUDE_DIRS})
-add_compile_options(-Wall ${LIBALPM_INCLUDE_DIRS})
+add_compile_options(-Wall -O2)
 
 add_executable(configuration-check
 	main.c
