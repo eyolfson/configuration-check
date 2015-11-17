@@ -16,6 +16,7 @@
  */
 
 #include <string.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #include <fts.h>
@@ -24,6 +25,7 @@
 
 #include <alpm.h>
 
+static const char * const ANSI_BOLD      = "\e[1m";
 static const char * const ANSI_RED       = "\e[31m";
 static const char * const ANSI_BLUE      = "\e[34m";
 static const char * const ANSI_BOLD_BLUE = "\e[1;34m";
@@ -59,12 +61,32 @@ void check_ownership()
 	fts_close(fts);
 }
 
+bool is_package_installed(alpm_handle_t *alpm_handle, char *name)
+{
+	alpm_db_t *alpm_db = alpm_get_localdb(alpm_handle);
+	alpm_list_t *i;
+	for(i = alpm_db_get_pkgcache(alpm_db); i; i = alpm_list_next(i)) {
+		alpm_pkg_t *pkg = (alpm_pkg_t *)(i->data);
+		if (strcmp(name, alpm_pkg_get_name(pkg)) == 0) {
+			return true;
+		}
+	}
+	return false;
+}
+
+typedef enum { SYSTEM, USER } check_mode_t;
+
 int main(int argc, const char * * argv)
 {
-	printf("%sConfiguration Check 0.1.0-development%s\n", ANSI_BOLD_BLUE,
-		ANSI_RESET);
+	printf("%sConfiguration Check%s %s0.1.0-development%s\n",
+		ANSI_BOLD_BLUE, ANSI_RESET, ANSI_BOLD, ANSI_RESET);
 
-	if (getuid() != 0) {
+	check_mode_t check_mode;
+	if (getuid() == 0) {
+		check_mode = SYSTEM;
+	}
+	else {
+		check_mode = USER;
 		printf("%sMust be run as root%s\n", ANSI_RED, ANSI_RESET);
 		return 1;
 	}
@@ -75,15 +97,21 @@ int main(int argc, const char * * argv)
 	}
 	printf("HOSTNAME: %s\n", hostname);
 
-	alpm_errno_t alpm_errno;
-	alpm_handle_t *alpm_handle = alpm_initialize("/", "/var/lib/pacman",
-		&alpm_errno);
-	alpm_db_t *alpm_db = alpm_get_localdb(alpm_handle);
+	alpm_errno_t alpm_errno = 0;
+	alpm_handle_t *alpm_handle = alpm_initialize(
+		"/", "/var/lib/pacman", &alpm_errno);
+	if (alpm_errno) {
+		printf("%s[ERROR] pacman:%s %s\n",
+			ANSI_RED, ANSI_RESET, alpm_strerror(alpm_errno));
+		return 1;
+	}
 
-	alpm_list_t *i;
-	for(i = alpm_db_get_pkgcache(alpm_db); i; i = alpm_list_next(i)) {
-		alpm_pkg_t *pkg = (alpm_pkg_t *)(i->data);
-		printf("PACKAGE: %s\n", alpm_pkg_get_name(pkg));
+	if (check_mode == SYSTEM) {
+		printf("xorg-server ");
+		if (!is_package_installed(alpm_handle, "xorg-server")) {
+			printf("not ");
+		}
+		printf("installed\n");
 	}
 
 	if (alpm_release(alpm_handle) != 0) {
