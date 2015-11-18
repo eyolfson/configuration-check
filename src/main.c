@@ -76,26 +76,40 @@ bool is_package_installed(alpm_handle_t *alpm_handle, char *name)
 
 typedef enum { SYSTEM, USER } check_mode_t;
 
+static
+int check_system(char *hostname, alpm_handle_t *alpm_handle)
+{
+	printf("xorg-server ");
+	if (!is_package_installed(alpm_handle, "xorg-server")) {
+		printf("not ");
+	}
+	printf("installed\n");
+	return 0;
+}
+
+static
+int check_user(char *hostname, alpm_handle_t *alpm_handle)
+{
+	printf("%sCheck for user configuration not implemented yet%s\n",
+		ANSI_RED, ANSI_RESET);
+	return 1;
+}
+
 int main(int argc, const char * * argv)
 {
 	printf("%sConfiguration Check%s %s0.1.0-development%s\n",
 		ANSI_BOLD_BLUE, ANSI_RESET, ANSI_BOLD, ANSI_RESET);
 
 	check_mode_t check_mode;
-	if (getuid() == 0) {
+	if (getuid() == 0)
 		check_mode = SYSTEM;
-	}
-	else {
+	else
 		check_mode = USER;
-		printf("%sMust be run as root%s\n", ANSI_RED, ANSI_RESET);
-		return 1;
-	}
 
 	char hostname[64];
 	if (gethostname(hostname, 64) != 0) {
 		return 1;
 	}
-	printf("HOSTNAME: %s\n", hostname);
 
 	alpm_errno_t alpm_errno = 0;
 	alpm_handle_t *alpm_handle = alpm_initialize(
@@ -106,17 +120,17 @@ int main(int argc, const char * * argv)
 		return 1;
 	}
 
+	int ret;
 	if (check_mode == SYSTEM) {
-		printf("xorg-server ");
-		if (!is_package_installed(alpm_handle, "xorg-server")) {
-			printf("not ");
-		}
-		printf("installed\n");
+		ret = check_system(hostname, alpm_handle);
+	}
+	else if (check_mode == USER) {
+		ret = check_user(hostname, alpm_handle);
 	}
 
 	if (alpm_release(alpm_handle) != 0) {
 		return 1;
 	}
 
-	return 0;
+	return ret;
 }
