@@ -20,6 +20,7 @@
 #include <stdio.h>
 
 #include <fts.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -61,6 +62,16 @@ void check_ownership()
 	fts_close(fts);
 }
 
+static
+bool is_directory(const char *const dir)
+{
+	struct stat buf;
+	if (stat(dir, &buf) == 0 && S_ISDIR(buf.st_mode))
+		return true;
+	return false;
+}
+
+static
 bool is_package_installed(alpm_handle_t *alpm_handle, char *name)
 {
 	alpm_db_t *alpm_db = alpm_get_localdb(alpm_handle);
@@ -99,6 +110,18 @@ int main(int argc, const char * * argv)
 {
 	printf("%sConfiguration Check%s %s0.1.0-development%s\n",
 		ANSI_BOLD_BLUE, ANSI_RESET, ANSI_BOLD, ANSI_RESET);
+
+	if (argc < 2) {
+		printf("%sCheck requires an argument%s\n",
+			ANSI_RED, ANSI_RESET);
+		return 1;
+	}
+	const char *const check_directory = argv[1];
+	if (!is_directory(check_directory)) {
+		printf("%sCheck requires a directory%s\n",
+			ANSI_RED, ANSI_RESET);
+		return 1;
+	}
 
 	check_mode_t check_mode;
 	if (getuid() == 0)
