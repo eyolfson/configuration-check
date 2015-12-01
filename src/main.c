@@ -116,6 +116,16 @@ int check_user(const char *check_directory,
 		return 1;
 	}
 
+	char host_directory[PATH_MAX];
+	strcpy(host_directory, user_directory);
+	strcat(host_directory, "/");
+	strcat(host_directory, hostname);
+	if (!is_directory(host_directory)) {
+		printf("%sCheck requires a 'user/%s' directory%s\n",
+			ANSI_RED, hostname, ANSI_RESET);
+		return 1;
+	}
+
 	return 0;
 }
 
