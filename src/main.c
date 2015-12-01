@@ -109,7 +109,6 @@ int check_user(const char *check_directory,
 	char user_directory[PATH_MAX];
 	strcpy(user_directory, check_directory);
 	strcat(user_directory, "/user");
-
 	if (!is_directory(check_directory)) {
 		printf("%sCheck requires a 'user' directory%s\n",
 			ANSI_RED, ANSI_RESET);
