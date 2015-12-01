@@ -20,6 +20,7 @@
 #include <stdio.h>
 
 #include <fts.h>
+#include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -88,7 +89,9 @@ bool is_package_installed(alpm_handle_t *alpm_handle, char *name)
 typedef enum { SYSTEM, USER } check_mode_t;
 
 static
-int check_system(char *hostname, alpm_handle_t *alpm_handle)
+int check_system(const char *check_directory,
+                 const char *hostname,
+                 alpm_handle_t *alpm_handle)
 {
 	printf("xorg-server ");
 	if (!is_package_installed(alpm_handle, "xorg-server")) {
@@ -99,11 +102,21 @@ int check_system(char *hostname, alpm_handle_t *alpm_handle)
 }
 
 static
-int check_user(char *hostname, alpm_handle_t *alpm_handle)
+int check_user(const char *check_directory,
+               const char *hostname,
+               alpm_handle_t *alpm_handle)
 {
-	printf("%sCheck for user configuration not implemented yet%s\n",
-		ANSI_RED, ANSI_RESET);
-	return 1;
+	char user_directory[PATH_MAX];
+	strcpy(user_directory, check_directory);
+	strcat(user_directory, "/user");
+
+	if (!is_directory(check_directory)) {
+		printf("%sCheck requires a 'user' directory%s\n",
+			ANSI_RED, ANSI_RESET);
+		return 1;
+	}
+
+	return 0;
 }
 
 int main(int argc, const char * * argv)
@@ -145,10 +158,10 @@ int main(int argc, const char * * argv)
 
 	int ret;
 	if (check_mode == SYSTEM) {
-		ret = check_system(hostname, alpm_handle);
+		ret = check_system(check_directory, hostname, alpm_handle);
 	}
 	else if (check_mode == USER) {
-		ret = check_user(hostname, alpm_handle);
+		ret = check_user(check_directory, hostname, alpm_handle);
 	}
 
 	if (alpm_release(alpm_handle) != 0) {
