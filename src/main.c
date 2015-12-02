@@ -108,7 +108,7 @@ int check_user(const char *check_directory,
 {
 	char user_directory[PATH_MAX];
 	strcpy(user_directory, check_directory);
-	strcat(user_directory, "/user");
+	strncat(user_directory, "/user", PATH_MAX);
 	if (!is_directory(check_directory)) {
 		printf("%sCheck requires a 'user' directory%s\n",
 			ANSI_RED, ANSI_RESET);
@@ -117,12 +117,21 @@ int check_user(const char *check_directory,
 
 	char host_directory[PATH_MAX];
 	strcpy(host_directory, user_directory);
-	strcat(host_directory, "/");
-	strcat(host_directory, hostname);
+	strncat(host_directory, "/", PATH_MAX);
+	strncat(host_directory, hostname, PATH_MAX);
 	if (!is_directory(host_directory)) {
 		printf("%sCheck requires a 'user/%s' directory%s\n",
 			ANSI_RED, hostname, ANSI_RESET);
 		return 1;
+	}
+
+	char base_directory[PATH_MAX];
+	strcpy(base_directory, user_directory);
+	strncat(base_directory, "/base", PATH_MAX);
+	bool base_directory_valid = is_directory(base_directory);
+	if (base_directory_valid) {
+		printf("%sCheck found 'user/base' directory%s\n",
+			ANSI_BLUE, ANSI_RESET);
 	}
 
 	return 0;
