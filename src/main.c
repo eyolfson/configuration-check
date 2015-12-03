@@ -19,10 +19,12 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include <fcntl.h>
 #include <fts.h>
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/mman.h>
 #include <unistd.h>
 
 #include <alpm.h>
@@ -32,6 +34,51 @@ static const char * const ANSI_RED       = "\e[31m";
 static const char * const ANSI_BLUE      = "\e[34m";
 static const char * const ANSI_BOLD_BLUE = "\e[1;34m";
 static const char * const ANSI_RESET     = "\e[m";
+
+struct unix_file {
+	char *data;
+	size_t size;
+};
+
+int unix_file_open(struct unix_file *unix_file, const char *path)
+{
+	if (unix_file == NULL)
+		return 1;
+
+	int fd = open(path, O_RDONLY);
+	if (fd == -1)
+		return 1;
+
+	struct stat stat;
+	if (fstat(fd, &stat) == -1) {
+		close(fd);
+		return 1;
+	}
+	size_t size = stat.st_size;
+
+	char *data = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
+	if (data == MAP_FAILED) {
+		close(fd);
+		return 1;
+	}
+	close(fd);
+
+	unix_file->data = data;
+	unix_file->size = size;
+	return 0;
+}
+
+int unix_file_close(struct unix_file *unix_file)
+{
+	if (unix_file == NULL || unix_file->data == NULL)
+		return 1;
+
+	munmap(unix_file->data, unix_file->size);
+
+	unix_file->data = NULL;
+	unix_file->size = 0;
+	return 0;
+}
 
 void check_ownership()
 {
