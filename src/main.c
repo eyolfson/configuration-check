@@ -148,6 +148,72 @@ int check_system(const char *check_directory,
 	return 0;
 }
 
+struct template_key_value {
+	const char *key_data;
+	size_t key_size;
+	const char *value_data;
+	size_t value_size;
+};
+
+static
+int check_user_base(const char *base_directory,
+                    struct unix_file *template_file)
+{
+	bool template_file_valid = template_file != NULL;
+	struct template_key_value template_store[128];
+	size_t template_size = 0;
+
+	if (template_file_valid) {
+		uint8_t state = 0;
+		const char *tmp;
+		for (size_t i = 0; i < template_file->size; ++i) {
+			const char *current = template_file->data + i;
+			char c = *current;
+			if (state == 0) {
+				template_store[template_size].key_data = current;
+				tmp = current;
+				state = 1;
+			}
+			else if (state == 1 && c == '=') {
+				template_store[template_size].key_size =
+					current - tmp;
+				state = 2;
+			}
+			else if (state == 2) {
+				template_store[template_size].value_data = current;
+				tmp = current;
+				state = 3;
+			}
+			else if (state == 3 && c == '\n') {
+				template_store[template_size].value_size =
+					current - tmp;
+				++template_size;
+				state = 0;
+			}
+		}
+		if (state != 0) {
+			/* Parse error */
+			return 2;
+		}
+	}
+
+	if (template_size > 0) {
+		for(size_t i = 0; i < template_size; ++i) {
+			for(size_t j = 0; j < template_store[i].key_size; ++j) {
+				printf("%c", template_store[i].key_data[j]);
+			}
+			printf("=");
+			for(size_t j = 0; j < template_store[i].value_size;
+			    ++j) {
+				printf("%c", template_store[i].value_data[j]);
+			}
+			printf("\n");
+		}
+	}
+
+	return 0;
+}
+
 static
 int check_user(const char *check_directory,
                const char *hostname,
@@ -180,6 +246,27 @@ int check_user(const char *check_directory,
 		printf("%sCheck found 'user/base' directory%s\n",
 			ANSI_BLUE, ANSI_RESET);
 	}
+
+	struct unix_file template_file;
+	bool template_file_valid;
+	{
+		char template_path[PATH_MAX];
+		strcpy(template_path, host_directory);
+		strncat(template_path, "/TEMPLATE", PATH_MAX);
+		int ret;
+		ret = unix_file_open(&template_file, template_path);
+		template_file_valid = ret == 0;
+	}
+
+	if (base_directory_valid) {
+		if (template_file_valid)
+			check_user_base(base_directory, &template_file);
+		else
+			check_user_base(base_directory, NULL);
+	}
+
+	if (template_file_valid)
+		unix_file_close(&template_file);
 
 	return 0;
 }
