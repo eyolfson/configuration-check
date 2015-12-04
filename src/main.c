@@ -180,7 +180,8 @@ int check_user_base(const char *base_directory,
 				state = 2;
 			}
 			else if (state == 2) {
-				template_store[template_size].value_data = current;
+				template_store[template_size].value_data =
+					current;
 				tmp = current;
 				state = 3;
 			}
