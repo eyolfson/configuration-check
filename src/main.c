@@ -120,7 +120,7 @@ bool is_directory(const char *const dir)
 }
 
 static
-bool is_package_installed(alpm_handle_t *alpm_handle, char *name)
+bool is_package_installed(alpm_handle_t *alpm_handle, const char *name)
 {
 	alpm_db_t *alpm_db = alpm_get_localdb(alpm_handle);
 	alpm_list_t *i;
@@ -156,8 +156,31 @@ struct template_key_value {
 };
 
 static
+int template_find_size_diff(const char *data,
+                            size_t size,
+                            struct template_key_value *template_store,
+                            size_t template_size,
+                            size_t *size_diff)
+{
+	printf("Using template\n");
+	for (size_t i = 0; i < template_size; ++i) {
+		for (size_t j = 0; j < template_store[i].key_size; ++j) {
+			printf("%c", template_store[i].key_data[j]);
+		}
+		printf("=");
+		for (size_t j = 0; j < template_store[i].value_size;
+		     ++j) {
+			printf("%c", template_store[i].value_data[j]);
+		}
+		printf("\n");
+	}
+	return 0;
+}
+
+static
 int check_user_base(const char *base_directory,
-                    struct unix_file *template_file)
+                    struct unix_file *template_file,
+                    alpm_handle_t *alpm_handle)
 {
 	bool template_file_valid = template_file != NULL;
 	struct template_key_value template_store[128];
@@ -198,19 +221,44 @@ int check_user_base(const char *base_directory,
 		}
 	}
 
-	if (template_size > 0) {
-		for(size_t i = 0; i < template_size; ++i) {
-			for(size_t j = 0; j < template_store[i].key_size; ++j) {
-				printf("%c", template_store[i].key_data[j]);
+	const char *const paths[2] = {base_directory, NULL};
+	FTS *fts = fts_open((char * const*)(paths), FTS_PHYSICAL, NULL);
+
+	FTSENT *ftsent;
+	uint32_t depth = 0;
+	size_t base_directory_length = strlen(base_directory);
+	while ((ftsent = fts_read(fts))) {
+		if (strcmp(ftsent->fts_path, "/etc/ImageMagick-6") == 0) {
+			fts_set(fts, ftsent, FTS_SKIP);
+		}
+
+		const char* path = ftsent->fts_path;
+		switch (ftsent->fts_info) {
+		case FTS_D:
+			++depth;
+			if (depth == 2) {
+				const char* name =
+					path + base_directory_length + 1;
+				if (!is_package_installed(alpm_handle, name))
+					printf("%s'%s' not installed %s\n",
+						ANSI_RED, name, ANSI_RESET);
 			}
-			printf("=");
-			for(size_t j = 0; j < template_store[i].value_size;
-			    ++j) {
-				printf("%c", template_store[i].value_data[j]);
-			}
-			printf("\n");
+			break;
+		case FTS_DP:
+			--depth;
+			break;
+		case FTS_F:
+			template_find_size_diff(NULL, 0, template_store, template_size, NULL);
+			break;
+		case FTS_DNR:
+		case FTS_ERR:
+		case FTS_NS:
+			printf("%sFilesystem error%s\n", ANSI_RED, ANSI_RESET);
+			return EXIT_FAILURE;
 		}
 	}
+
+	fts_close(fts);
 
 	return 0;
 }
@@ -263,9 +311,11 @@ int check_user(const char *check_directory,
 
 	if (base_directory_valid) {
 		if (template_file_valid)
-			check_user_base(base_directory, &template_file);
+			check_user_base(
+				base_directory, &template_file, alpm_handle);
 		else
-			check_user_base(base_directory, NULL);
+			check_user_base(
+				base_directory, NULL, alpm_handle);
 	}
 
 	if (template_file_valid)
