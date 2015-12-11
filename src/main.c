@@ -31,6 +31,8 @@
 
 static const char * const ANSI_BOLD      = "\e[1m";
 static const char * const ANSI_RED       = "\e[31m";
+static const char * const ANSI_GREEN     = "\e[32m";
+static const char * const ANSI_YELLOW    = "\e[33m";
 static const char * const ANSI_BLUE      = "\e[34m";
 static const char * const ANSI_BOLD_BLUE = "\e[1;34m";
 static const char * const ANSI_RESET     = "\e[m";
@@ -102,7 +104,7 @@ void check_ownership()
 		case FTS_ERR:
 		case FTS_NS:
 			printf("%sFilesystem error%s\n", ANSI_RED, ANSI_RESET);
-			return EXIT_FAILURE;
+			return;
 		}
 		printf("%s\n", ftsent->fts_path);
 	}
@@ -223,22 +225,26 @@ int check_user_base(const char *base_directory,
 
 	const char *const paths[2] = {base_directory, NULL};
 	FTS *fts = fts_open((char * const*)(paths), FTS_PHYSICAL, NULL);
+	if (fts == NULL)
+		return 1;
 
 	FTSENT *ftsent;
 	uint32_t depth = 0;
-	size_t base_directory_length = strlen(base_directory);
+	size_t base_directory_length = strlen(base_directory) + 1;
+	int ret;
 	while ((ftsent = fts_read(fts))) {
 		if (strcmp(ftsent->fts_path, "/etc/ImageMagick-6") == 0) {
 			fts_set(fts, ftsent, FTS_SKIP);
 		}
 
 		const char* path = ftsent->fts_path;
+		struct unix_file configuration_file;
 		switch (ftsent->fts_info) {
 		case FTS_D:
 			++depth;
 			if (depth == 2) {
 				const char* name =
-					path + base_directory_length + 1;
+					path + base_directory_length;
 				if (!is_package_installed(alpm_handle, name))
 					printf("%s'%s' not installed %s\n",
 						ANSI_RED, name, ANSI_RESET);
@@ -248,7 +254,23 @@ int check_user_base(const char *base_directory,
 			--depth;
 			break;
 		case FTS_F:
-			template_find_size_diff(NULL, 0, template_store, template_size, NULL);
+			ret = unix_file_open(&configuration_file, path);
+			if (ret != 0) {
+				printf("%s'%s' not used%s\n",
+					ANSI_YELLOW,
+					path + base_directory_length,
+					ANSI_RESET);
+				ret = 0;
+				break;
+			}
+			size_t size_diff;
+			template_find_size_diff(
+				configuration_file.data,
+				configuration_file.size,
+				template_store, template_size, &size_diff);
+			ret = unix_file_close(&configuration_file);
+			if (ret != 0)
+				break;
 			break;
 		case FTS_DNR:
 		case FTS_ERR:
@@ -256,11 +278,14 @@ int check_user_base(const char *base_directory,
 			printf("%sFilesystem error%s\n", ANSI_RED, ANSI_RESET);
 			return EXIT_FAILURE;
 		}
+
+		if (ret != 0)
+			break;
 	}
 
 	fts_close(fts);
 
-	return 0;
+	return ret;
 }
 
 static
