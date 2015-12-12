@@ -171,14 +171,16 @@ bool template_is_valid(const char *data,
 }
 
 static
-int basic_process(const char *data,
+int basic_process(const char *path,
+                  const char *data,
                   size_t size)
 {
 	return 0;
 }
 
 static
-int template_process(const char *data,
+int template_process(const char *path,
+                     const char *data,
                      size_t size,
                      struct template_key_value *template_store,
                      size_t template_size)
@@ -274,7 +276,7 @@ int check_user_base(const char *base_directory,
 			if (ret != 0) {
 				printf("%s'%s' not used%s\n",
 					ANSI_YELLOW,
-					path + base_directory_length,
+					path + ignore_length,
 					ANSI_RESET);
 				ret = 0;
 				break;
@@ -283,15 +285,21 @@ int check_user_base(const char *base_directory,
 			if (template_is_valid(configuration_file.data,
 			                      configuration_file.size)) {
 				ret = template_process(
+					path + ignore_length,
 					configuration_file.data,
 					configuration_file.size,
 					template_store, template_size);
 			}
 			else {
 				ret = basic_process(
+					path + ignore_length,
 					configuration_file.data,
 					configuration_file.size);
 			}
+			printf("%s'%s' up to date%s\n",
+				ANSI_GREEN,
+				path + ignore_length,
+				ANSI_RESET);
 			unix_file_close(&configuration_file);
 			break;
 		case FTS_DNR:
