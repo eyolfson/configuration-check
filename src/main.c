@@ -158,24 +158,31 @@ struct template_key_value {
 };
 
 static
-int template_find_size_diff(const char *data,
-                            size_t size,
-                            struct template_key_value *template_store,
-                            size_t template_size,
-                            size_t *size_diff)
+bool template_is_valid(const char *data,
+                       size_t size)
 {
-	printf("Using template\n");
-	for (size_t i = 0; i < template_size; ++i) {
-		for (size_t j = 0; j < template_store[i].key_size; ++j) {
-			printf("%c", template_store[i].key_data[j]);
-		}
-		printf("=");
-		for (size_t j = 0; j < template_store[i].value_size;
-		     ++j) {
-			printf("%c", template_store[i].value_data[j]);
-		}
-		printf("\n");
-	}
+	const char *TEMPLATE_HEADER_DATA = "//! TEMPLATE\n";
+	size_t TEMPLATE_HEADER_SIZE = strlen(TEMPLATE_HEADER_DATA);
+	if (size <= TEMPLATE_HEADER_SIZE)
+		return false;
+	if (strncmp(data, TEMPLATE_HEADER_DATA, TEMPLATE_HEADER_SIZE) != 0)
+		return false;
+	return true;
+}
+
+static
+int basic_process(const char *data,
+                  size_t size)
+{
+	return 0;
+}
+
+static
+int template_process(const char *data,
+                     size_t size,
+                     struct template_key_value *template_store,
+                     size_t template_size)
+{
 	return 0;
 }
 
@@ -231,6 +238,7 @@ int check_user_base(const char *base_directory,
 	FTSENT *ftsent;
 	uint32_t depth = 0;
 	size_t base_directory_length = strlen(base_directory) + 1;
+	size_t ignore_length = 0;
 	int ret;
 	while ((ftsent = fts_read(fts))) {
 		if (strcmp(ftsent->fts_path, "/etc/ImageMagick-6") == 0) {
@@ -245,15 +253,23 @@ int check_user_base(const char *base_directory,
 			if (depth == 2) {
 				const char* name =
 					path + base_directory_length;
-				if (!is_package_installed(alpm_handle, name))
+				if (!is_package_installed(alpm_handle, name)) {
 					printf("%s'%s' not installed %s\n",
 						ANSI_RED, name, ANSI_RESET);
+					fts_set(fts, ftsent, FTS_SKIP);
+				}
+				else {
+					ignore_length = strlen(path) + 1;
+				}
 			}
 			break;
 		case FTS_DP:
 			--depth;
 			break;
 		case FTS_F:
+			if (depth <= 1)
+				break;
+
 			ret = unix_file_open(&configuration_file, path);
 			if (ret != 0) {
 				printf("%s'%s' not used%s\n",
@@ -263,14 +279,20 @@ int check_user_base(const char *base_directory,
 				ret = 0;
 				break;
 			}
-			size_t size_diff;
-			template_find_size_diff(
-				configuration_file.data,
-				configuration_file.size,
-				template_store, template_size, &size_diff);
-			ret = unix_file_close(&configuration_file);
-			if (ret != 0)
-				break;
+
+			if (template_is_valid(configuration_file.data,
+			                      configuration_file.size)) {
+				ret = template_process(
+					configuration_file.data,
+					configuration_file.size,
+					template_store, template_size);
+			}
+			else {
+				ret = basic_process(
+					configuration_file.data,
+					configuration_file.size);
+			}
+			unix_file_close(&configuration_file);
 			break;
 		case FTS_DNR:
 		case FTS_ERR:
