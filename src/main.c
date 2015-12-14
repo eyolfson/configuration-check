@@ -175,6 +175,29 @@ int basic_process(const char *path,
                   const char *data,
                   size_t size)
 {
+	char home_path[PATH_MAX];
+	const char *home_dir = getenv("HOME");
+	strcpy(home_path, home_dir);
+	strcat(home_path, "/.");
+	strcat(home_path, path);
+
+	int ret;
+	struct unix_file dest_file;
+	ret = unix_file_open(&dest_file, home_path);
+	if (ret == 0) {
+		bool mismatch = false;
+		if (size != dest_file.size) {
+			mismatch = true;
+		}
+
+		if (mismatch) {
+			printf("%s'%s' doesn't match%s\n",
+				ANSI_YELLOW, home_path, ANSI_RESET);
+		}
+		ret = unix_file_close(&dest_file);
+		return ret;
+	}
+
 	return 0;
 }
 
