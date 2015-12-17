@@ -176,7 +176,7 @@ bool are_buffers_same(const void *x_data, size_t x_size,
 {
 	if (x_size != y_size)
 		return false;
-	return memcmp(x_data, y_data, x_size);
+	return memcmp(x_data, y_data, x_size) == 0;
 }
 
 static
