@@ -171,6 +171,15 @@ bool template_is_valid(const char *data,
 }
 
 static
+bool are_buffers_same(const void *x_data, size_t x_size,
+                      const void *y_data, size_t y_size)
+{
+	if (x_size != y_size)
+		return false;
+	return memcmp(x_data, y_data, x_size);
+}
+
+static
 int basic_process(const char *path,
                   const char *data,
                   size_t size)
@@ -185,12 +194,12 @@ int basic_process(const char *path,
 	struct unix_file dest_file;
 	ret = unix_file_open(&dest_file, home_path);
 	if (ret == 0) {
-		bool mismatch = false;
-		if (size != dest_file.size) {
-			mismatch = true;
+		if (are_buffers_same(data, size,
+		                     dest_file.data, dest_file.size)) {
+			printf("%s'%s' match%s\n",
+				ANSI_GREEN, home_path, ANSI_RESET);
 		}
-
-		if (mismatch) {
+		else {
 			printf("%s'%s' doesn't match%s\n",
 				ANSI_YELLOW, home_path, ANSI_RESET);
 		}
