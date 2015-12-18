@@ -29,6 +29,8 @@
 
 #include <alpm.h>
 
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+
 static const char * const ANSI_BOLD      = "\e[1m";
 static const char * const ANSI_RED       = "\e[31m";
 static const char * const ANSI_GREEN     = "\e[32m";
@@ -41,6 +43,9 @@ struct unix_file {
 	char *data;
 	size_t size;
 };
+
+static const char TEMPLATE_HEADER_DATA[] = "//! TEMPLATE\n";
+static const size_t TEMPLATE_HEADER_SIZE = ARRAY_SIZE(TEMPLATE_HEADER_DATA) - 1;
 
 int unix_file_open(struct unix_file *unix_file, const char *path)
 {
@@ -161,8 +166,6 @@ static
 bool template_is_valid(const char *data,
                        size_t size)
 {
-	const char *TEMPLATE_HEADER_DATA = "//! TEMPLATE\n";
-	size_t TEMPLATE_HEADER_SIZE = strlen(TEMPLATE_HEADER_DATA);
 	if (size <= TEMPLATE_HEADER_SIZE)
 		return false;
 	if (strncmp(data, TEMPLATE_HEADER_DATA, TEMPLATE_HEADER_SIZE) != 0)
@@ -318,7 +321,8 @@ int check_user_base(const char *base_directory,
 			                      configuration_file.size)) {
 				ret = template_process(
 					path + ignore_length,
-					configuration_file.data,
+					configuration_file.data
+						+ TEMPLATE_HEADER_SIZE,
 					configuration_file.size,
 					template_store, template_size);
 			}
