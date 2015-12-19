@@ -31,13 +31,13 @@
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
-static const char * const ANSI_BOLD      = "\e[1m";
-static const char * const ANSI_RED       = "\e[31m";
-static const char * const ANSI_GREEN     = "\e[32m";
-static const char * const ANSI_YELLOW    = "\e[33m";
-static const char * const ANSI_BLUE      = "\e[34m";
-static const char * const ANSI_BOLD_BLUE = "\e[1;34m";
-static const char * const ANSI_RESET     = "\e[m";
+static const char *const ANSI_BOLD      = "\e[1m";
+static const char *const ANSI_RED       = "\e[31m";
+static const char *const ANSI_GREEN     = "\e[32m";
+static const char *const ANSI_YELLOW    = "\e[33m";
+static const char *const ANSI_BLUE      = "\e[34m";
+static const char *const ANSI_BOLD_BLUE = "\e[1;34m";
+static const char *const ANSI_RESET     = "\e[m";
 
 struct unix_file {
 	char *data;
