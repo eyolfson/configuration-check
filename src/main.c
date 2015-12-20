@@ -278,10 +278,6 @@ int check_user_base(const char *base_directory,
 	size_t ignore_length = 0;
 	int ret;
 	while ((ftsent = fts_read(fts))) {
-		if (strcmp(ftsent->fts_path, "/etc/ImageMagick-6") == 0) {
-			fts_set(fts, ftsent, FTS_SKIP);
-		}
-
 		const char* path = ftsent->fts_path;
 		struct unix_file configuration_file;
 		switch (ftsent->fts_info) {
