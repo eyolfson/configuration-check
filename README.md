@@ -2,6 +2,10 @@
 
 A tool to setup your Arch Linux system.
 
+## Usage
+
+`configuration-check` requires one argument, a directory containing the layout.
+
 ## Layout
 
 This program looks for a `system` or `user` directory. The next directory
