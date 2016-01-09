@@ -209,6 +209,10 @@ int basic_process(const char *path,
 		ret = unix_file_close(&dest_file);
 		return ret;
 	}
+	else {
+		printf("%s'%s' file doesn't exist%s\n",
+			ANSI_YELLOW, path, ANSI_RESET);
+	}
 
 	return 0;
 }
