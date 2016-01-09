@@ -199,8 +199,8 @@ int basic_process(const char *path,
 	if (ret == 0) {
 		if (are_buffers_same(data, size,
 		                     dest_file.data, dest_file.size)) {
-			printf("%s'%s' file up to date%s\n",
-				ANSI_GREEN, home_path, ANSI_RESET);
+			printf("%s'%s' file matches%s\n",
+				ANSI_GREEN, path, ANSI_RESET);
 		}
 		else {
 			printf("%s'%s' file doesn't match%s\n",
