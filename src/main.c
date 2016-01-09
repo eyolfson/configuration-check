@@ -199,12 +199,12 @@ int basic_process(const char *path,
 	if (ret == 0) {
 		if (are_buffers_same(data, size,
 		                     dest_file.data, dest_file.size)) {
-			printf("%s'%s' match%s\n",
+			printf("%s'%s' file up to date%s\n",
 				ANSI_GREEN, home_path, ANSI_RESET);
 		}
 		else {
-			printf("%s'%s' doesn't match%s\n",
-				ANSI_YELLOW, home_path, ANSI_RESET);
+			printf("%s'%s' file doesn't match%s\n",
+				ANSI_YELLOW, path, ANSI_RESET);
 		}
 		ret = unix_file_close(&dest_file);
 		return ret;
@@ -220,6 +220,8 @@ int template_process(const char *path,
                      struct template_key_value *template_store,
                      size_t template_size)
 {
+	printf("%s'%s' template not used%s\n",
+		ANSI_YELLOW, path, ANSI_RESET);
 	return 0;
 }
 
@@ -287,7 +289,7 @@ int check_user_base(const char *base_directory,
 				const char* name =
 					path + base_directory_length;
 				if (!is_package_installed(alpm_handle, name)) {
-					printf("%s'%s' not installed %s\n",
+					printf("%s'%s' package not installed %s\n",
 						ANSI_RED, name, ANSI_RESET);
 					fts_set(fts, ftsent, FTS_SKIP);
 				}
@@ -328,7 +330,7 @@ int check_user_base(const char *base_directory,
 					configuration_file.data,
 					configuration_file.size);
 			}
-			printf("%s'%s' up to date%s\n",
+			printf("%s'%s' processed%s\n",
 				ANSI_GREEN,
 				path + ignore_length,
 				ANSI_RESET);
