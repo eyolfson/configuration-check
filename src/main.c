@@ -224,8 +224,89 @@ int template_process(const char *path,
                      struct template_key_value *template_store,
                      size_t template_size)
 {
-	printf("%s'%s' template not used%s\n",
-		ANSI_YELLOW, path, ANSI_RESET);
+	size_t new_size = size;
+
+	/* calculate the size for the processed file */
+	const char *current = data;
+	while ((current - data) < size) {
+		bool match = false;
+		if (*current == '{') {
+			size_t remaining = data + size - current;
+			for (size_t i = 0; i < template_size; ++i) {
+				const char* key_data =
+					template_store[i].key_data;
+				size_t key_size = template_store[i].key_size;
+				size_t value_size =
+					template_store[i].value_size;
+
+				/* Add 2 for the curly bracket characters */
+				if (remaining >= (key_size + 2)) {
+					if (strncmp(current + 1, key_data,
+					            key_size) == 0 &&
+					    *(current + 1 + key_size) == '}') {
+						new_size -= key_size + 2;
+						new_size += value_size;
+
+						current += key_size + 2;
+						match = true;
+						break;
+					}
+				}
+			}
+		}
+		if (!match) {
+			++current;
+		}
+	}
+
+	char *new_data = malloc(new_size);
+	if (new_data == NULL)
+		return 1;
+
+	/* do the substitutions */
+	current = data;
+	char *new_current = new_data;
+	while ((current - data) < size) {
+		bool match = false;
+		if (*current == '{') {
+
+			size_t remaining = data + size - current;
+			for (size_t i = 0; i < template_size; ++i) {
+				const char* key_data =
+					template_store[i].key_data;
+				size_t key_size = template_store[i].key_size;
+				const char* value_data =
+					template_store[i].value_data;
+				size_t value_size =
+					template_store[i].value_size;
+
+				/* Add 2 for the curly bracket characters */
+				if (remaining >= (key_size + 2)) {
+					if (strncmp(current + 1, key_data,
+					            key_size) == 0 &&
+					    *(current + 1 + key_size) == '}') {
+						memcpy(new_current, value_data, value_size);
+
+						current += key_size + 2;
+						new_current += value_size;
+						match = true;
+						break;
+					}
+				}
+			}
+		}
+
+		if (!match) {
+			*new_current = *current;
+
+			++current;
+			++new_current;
+		}
+	}
+
+	basic_process(path, new_data, new_size);
+
+	free(new_data);
 	return 0;
 }
 
@@ -325,7 +406,8 @@ int check_user_base(const char *base_directory,
 					path + ignore_length,
 					configuration_file.data
 						+ TEMPLATE_HEADER_SIZE,
-					configuration_file.size,
+					configuration_file.size
+						- TEMPLATE_HEADER_SIZE,
 					template_store, template_size);
 			}
 			else {
@@ -334,10 +416,6 @@ int check_user_base(const char *base_directory,
 					configuration_file.data,
 					configuration_file.size);
 			}
-			printf("%s'%s' processed%s\n",
-				ANSI_GREEN,
-				path + ignore_length,
-				ANSI_RESET);
 			unix_file_close(&configuration_file);
 			break;
 		case FTS_DNR:
